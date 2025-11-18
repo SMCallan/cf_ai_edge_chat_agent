@@ -1,41 +1,155 @@
-# cf_ai_edge_chat_agent
+# **PROMPTS.md**
 
-An AI-powered chat agent built for the Cloudflare Software Engineer Intern (Spring 2026) optional assignment.
+### *Minimal prompt log for reproducing the Cloudflare Edge AI Chat Agent*
 
-This project demonstrates:
+This file documents the **core prompts** used to generate the Worker, Durable Object, frontend, and configuration needed to build this demo.
+It is intentionally concise — it shows the workflow and the agent instructions used, without implementation noise.
 
-- An **LLM** running on **Cloudflare Workers AI** (Llama 3.3-style model).
-- **Workflow / coordination** via an **Agent** built on **Durable Objects**.
-- **User input** through a simple **chat UI** (HTML/JS) calling the Worker.
-- **Memory / state** stored in the Agent's built-in state (conversation history).
+---
 
-## Architecture
+## **1. Project Scaffolding Prompt**
 
-- `ChatAgent` extends the Cloudflare `Agent` class and runs as a Durable Object.
-- It keeps a rolling window of the last 10 conversation messages in persistent state.
-- On each user message:
-  - History is loaded from state.
-  - A new prompt is built and sent to Workers AI (Llama-based model).
-  - The reply is stored in state and returned to the client.
-- A minimal static HTML page (`public/index.html`) acts as the frontend, sending `POST /chat` requests.
+**Goal:** Create a minimal Cloudflare Workers AI chat agent with memory.
 
-## Requirements satisfied
+```
+Create a minimal Cloudflare Workers project with:
 
-- **LLM**  
-  Uses Workers AI via the `AI` binding (Llama-style model: `@cf/meta/llama-3.3-8b-instruct`).
+- Cloudflare Worker as the main entrypoint
+- A Durable Object for per-session conversational memory
+- Workers AI calling an instruct model (`@cf/meta/llama-3-8b-instruct`)
+- A simple HTML/CSS/JS UI using fetch('/chat') POST calls
+- No SDKs or frameworks, keep everything lightweight
+- Project structure:
+  wrangler.toml
+  src/agent.ts
+  public/index.html
+  README.md
+  PROMPTS.md
+```
 
-- **Workflow / coordination**  
-  Implemented using a Durable Object (`ChatAgent`) which coordinates requests and state.
+---
 
-- **User input (chat)**  
-  Implemented as a text-based chat UI served by the Worker. The UI hits `/chat` with JSON payloads.
+## **2. Durable Object Logic Prompt**
 
-- **Memory / state**  
-  Chat history (last 10 messages) is persisted inside the Agent state, providing contextual responses.
+**Goal:** Generate the conversation-memory engine.
 
-## Running locally
+```
+Write a Durable Object class (ChatAgentDO) that:
+- stores the last N messages in state.storage
+- loads/saves history
+- receives a user message
+- builds a prompt from history
+- calls Workers AI
+- appends the assistant reply
+- returns the reply
+```
 
-1. Install dependencies:
+---
 
-   ```bash
-   npm install
+## **3. Workers AI Integration Prompt**
+
+**Goal:** Ensure the DO uses Workers AI correctly.
+
+```
+Show code that calls Workers AI using env.AI.run(...) with:
+- a system prompt for a concise assistant
+- conversation history as 'messages'
+- fallback logic for different Workers AI response formats
+- returning reply as plain text
+```
+
+---
+
+## **4. Worker Routing Prompt**
+
+**Goal:** Build the Worker fetch handler.
+
+```
+Add a Worker fetch handler that:
+- serves index.html from public/
+- POST /chat → forwards message to the Durable Object
+- GET /history → returns stored messages
+- routes all chat logic through a single DO instance
+```
+
+---
+
+## **5. Frontend Prompt**
+
+**Goal:** Build the minimal chat UI.
+
+```
+Create a simple HTML/CSS/JS chat UI with:
+- message window
+- input box + send button
+- POST to /chat with JSON
+- append assistant replies to the DOM
+- no framework, no build step
+```
+
+---
+
+## **6. Wrangler Config Prompt**
+
+**Goal:** Finalise the wrangler.toml.
+
+```
+Write wrangler.toml with:
+name, main, compatibility_date
+AI binding
+Durable Object binding (ChatAgentDO)
+sqlite migration (new_sqlite_classes for free tier)
+assets directory = ./public
+```
+
+---
+
+## **7. Debug/Fix Prompt**
+
+**Goal:** Remove TypeScript errors + simplify environment.
+
+```
+Remove all Cloudflare-specific TypeScript types.
+Use "any" for env, state, and Workers AI responses.
+Fix precedence error with ?? and ||.
+Ensure the DO class name matches wrangler.toml.
+```
+
+---
+
+## **8. Deployment Prompt**
+
+**Goal:** Deploy correctly on free plan.
+
+```
+Show commands for:
+npm install
+npx wrangler login
+npm run dev
+npx wrangler deploy
+
+Note: free tier DO requires new_sqlite_classes migration.
+```
+
+---
+
+## **9. README + Repo Setup Prompt**
+
+**Goal:** Produce a professional README.
+
+```
+Write a concise README explaining:
+- architecture (Worker, DO, Workers AI)
+- local development steps
+- deployment steps
+- model used
+- link to live worker
+- project structure
+```
+
+---
+
+## **Purpose of This File**
+
+This file exists so contributors can see the **prompt lineage** used to generate the demo and recreate/extend the project using the same workflow.
+
