@@ -1,0 +1,124 @@
+// src/agent.ts
+import { Agent } from "agents";
+
+type Env = {
+  AI: Ai; // Workers AI binding, inferred from wrangler.toml
+  ChatAgent: DurableObjectNamespace;
+};
+
+type Message = {
+  role: "user" | "assistant";
+  content: string;
+};
+
+export class ChatAgent extends Agent<Env> {
+  /**
+   * Handle a user message:
+   *  - load history from state
+   *  - append user message
+   *  - call Workers AI (Llama)
+   *  - store assistant reply
+   *  - return reply
+   */
+  async handleUserMessage(input: string): Promise<string> {
+    const history = (await this.getState<Message[]>("history")) ?? [];
+
+    const newHistory: Message[] = [
+      ...history.slice(-9), // keep last 9 messages
+      { role: "user", content: input },
+    ];
+
+    await this.setState("history", newHistory);
+
+    const prompt = buildPrompt(newHistory);
+
+    // Call Workers AI – using a generic text-generation model
+    // Make sure your account has access to the chosen model
+    const response = await this.env.AI.run("@cf/meta/llama-3.3-8b-instruct", {
+      messages: [
+        {
+          role: "system",
+          content:
+            "You are a friendly but concise AI assistant running on Cloudflare Workers at the edge. Keep answers short and helpful.",
+        },
+        { role: "user", content: prompt },
+      ],
+    });
+
+    // Workers AI returns different structures depending on model;
+    // we'll assume { response: string } style for simplicity.
+    const reply: string =
+      (response as any).response ??
+      (Array.isArray((response as any).choices) &&
+        (response as any).choices[0]?.message?.content) ||
+      "Sorry, I could not generate a response.";
+
+    const updatedHistory: Message[] = [
+      ...newHistory,
+      { role: "assistant", content: reply },
+    ];
+
+    await this.setState("history", updatedHistory);
+
+    return reply;
+  }
+
+  /**
+   * HTTP interface:
+   *  - POST /chat { message: string }
+   * Returns: { reply: string }
+   */
+  async fetch(request: Request): Promise<Response> {
+    const url = new URL(request.url);
+
+    if (request.method === "POST" && url.pathname === "/chat") {
+      const data = await request.json().catch(() => null);
+      const message = data?.message;
+
+      if (!message || typeof message !== "string") {
+        return new Response(
+          JSON.stringify({ error: "Missing 'message' in body." }),
+          {
+            status: 400,
+            headers: { "Content-Type": "application/json" },
+          }
+        );
+      }
+
+      const reply = await this.handleUserMessage(message);
+      return new Response(JSON.stringify({ reply }), {
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    if (request.method === "GET" && url.pathname === "/history") {
+      const history = (await this.getState<Message[]>("history")) ?? [];
+      return new Response(JSON.stringify({ history }), {
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    return new Response("ChatAgent up and running.", { status: 200 });
+  }
+}
+
+/**
+ * Helper: turn conversation into a text prompt.
+ */
+function buildPrompt(history: Message[]): string {
+  return history
+    .map((m) => `${m.role.toUpperCase()}: ${m.content}`)
+    .join("\n");
+}
+
+/**
+ * Export the Worker entrypoint to route to the ChatAgent Durable Object.
+ */
+export default {
+  async fetch(request: Request, env: Env): Promise<Response> {
+    const url = new URL(request.url);
+    const id = env.ChatAgent.idFromName("global-chat-agent");
+    const stub = env.ChatAgent.get(id);
+    return stub.fetch(request);
+  },
+};
