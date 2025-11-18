@@ -1,4 +1,4 @@
-# **README.md (final, polished, drop-in)**
+# **README.md**
 
 ````markdown
 # cf_ai_edge_chat_agent
