@@ -126,7 +126,6 @@ new_sqlite_classes = ["ChatAgentDO"]   # required for free tier
 
 ## 📄 Licence
 
-No Licence - This is a project made to demonstrate something. You can literally do whatever you want, granted to do no violate any laws or rules imposed upon you. Thank you.
 
-```
+``` No Licence - This is a project made to demonstrate something. You can literally do whatever you want, granted to do no violate any laws or rules imposed upon you. Thank you.
 
