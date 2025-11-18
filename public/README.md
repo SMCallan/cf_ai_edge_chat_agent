@@ -1,6 +1,3 @@
-# **README.md**
-
-````markdown
 # cf_ai_edge_chat_agent
 
 A lightweight, self-hosted chat agent running on **Cloudflare Workers**, **Durable Objects**, and **Workers AI**.  
