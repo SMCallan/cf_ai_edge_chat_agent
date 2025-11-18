@@ -17,7 +17,7 @@ This project is submitted as part of the **Cloudflare AI Optional Assignment**.
 👉 [https://cf_ai_edge_chat_agent.s035187n.workers.dev](https://cf_ai_edge_chat_agent.s035187n.workers.dev)
 
 **GitHub Repository:**
-👉 [https://github.com/SMCallan/cf_ai_edge_chat_agent](https://github.com/SMCallan/cf_ai_edge_chat_agent)
+👉 [[https://github.com/SMCallan/cf_ai_edge_chat_agent]](https://github.com/SMCallan/cf_ai_edge_chat_agent/blob/main/public/README.md)
 
 ---
 
